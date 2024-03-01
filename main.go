@@ -1,7 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"zx-net/net"
+)
 
 func main() {
-	fmt.Println("hello zx-net")
+	s := net.NewServer("zx-net")
+	s.Serve()
 }
