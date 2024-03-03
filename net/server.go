@@ -1,6 +1,7 @@
 package net
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"zx-net/iface"
@@ -11,6 +12,17 @@ type Server struct {
 	IPVersion string
 	Ip        string
 	Port      int
+}
+
+// 定义当前客户端链接绑定的handle api 目前写死了回显，后续可以由用固话增加协议解析等回调
+func CallBackToClient(conn *net.TCPConn, data []byte, msgLen int) error {
+	fmt.Println("callback to client")
+	_, err := conn.Write(data[:msgLen])
+	if err != nil {
+		fmt.Println("write back err:", err)
+		return errors.New("callback to client error")
+	}
+	return nil
 }
 
 // 启动服务器
@@ -33,6 +45,9 @@ func (s *Server) Start() {
 
 		fmt.Println("server start success")
 
+		var cid uint32
+		cid = 0
+
 		for {
 			conn, err := listener.AcceptTCP()
 			if err != nil {
@@ -40,21 +55,26 @@ func (s *Server) Start() {
 				continue
 			}
 
-			go func() {
-				for {
-					buf := make([]byte, 512)
-					readLen, err := conn.Read(buf)
-					if err != nil {
-						fmt.Println("read buf err:", err)
-						continue
-					}
+			connection := NewConnection(conn, cid, CallBackToClient)
 
-					if _, err := conn.Write(buf[:readLen]); err != nil {
-						fmt.Println("write buf err:", err)
-						continue
-					}
-				}
-			}()
+			cid++
+
+			go connection.Start()
+			//go func() {
+			//	for {
+			//		buf := make([]byte, 512)
+			//		readLen, err := conn.Read(buf)
+			//		if err != nil {
+			//			fmt.Println("read buf err:", err)
+			//			continue
+			//		}
+			//
+			//		if _, err := conn.Write(buf[:readLen]); err != nil {
+			//			fmt.Println("write buf err:", err)
+			//			continue
+			//		}
+			//	}
+			//}()
 		}
 	}()
 
