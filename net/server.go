@@ -1,7 +1,6 @@
 package net
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"zx-net/iface"
@@ -12,18 +11,23 @@ type Server struct {
 	IPVersion string
 	Ip        string
 	Port      int
+	Router    iface.RouterInterface
+}
+
+func (s *Server) AddRouter(router iface.RouterInterface) {
+	s.Router = router
 }
 
 // 定义当前客户端链接绑定的handle api 目前写死了回显，后续可以由用固话增加协议解析等回调
-func CallBackToClient(conn *net.TCPConn, data []byte, msgLen int) error {
-	fmt.Println("callback to client")
-	_, err := conn.Write(data[:msgLen])
-	if err != nil {
-		fmt.Println("write back err:", err)
-		return errors.New("callback to client error")
-	}
-	return nil
-}
+//func CallBackToClient(conn *net.TCPConn, data []byte, msgLen int) error {
+//	fmt.Println("callback to client")
+//	_, err := conn.Write(data[:msgLen])
+//	if err != nil {
+//		fmt.Println("write back err:", err)
+//		return errors.New("callback to client error")
+//	}
+//	return nil
+//}
 
 // 启动服务器
 func (s *Server) Start() {
@@ -55,7 +59,7 @@ func (s *Server) Start() {
 				continue
 			}
 
-			connection := NewConnection(conn, cid, CallBackToClient)
+			connection := NewConnection(conn, cid, s.Router)
 
 			cid++
 
@@ -99,5 +103,6 @@ func NewServer(name string) iface.ServerInterface {
 		IPVersion: "tcp4",
 		Ip:        "0.0.0.0",
 		Port:      8888,
+		Router:    nil,
 	}
 }

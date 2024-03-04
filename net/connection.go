@@ -8,20 +8,20 @@ import (
 
 // 链接类
 type Connection struct {
-	Conn      *net.TCPConn
-	ConnID    uint32
-	isClosed  bool
-	handleAPI iface.HandleFunc
-	ExitChan  chan bool
+	Conn     *net.TCPConn
+	ConnID   uint32
+	isClosed bool
+	ExitChan chan bool
+	Router   iface.RouterInterface
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, callbackApi iface.HandleFunc) *Connection {
+func NewConnection(conn *net.TCPConn, connId uint32, router iface.RouterInterface) *Connection {
 	return &Connection{
-		Conn:      conn,
-		ConnID:    connId,
-		handleAPI: callbackApi,
-		isClosed:  false,
-		ExitChan:  make(chan bool, 1),
+		Conn:     conn,
+		ConnID:   connId,
+		Router:   router,
+		isClosed: false,
+		ExitChan: make(chan bool, 1),
 	}
 }
 
@@ -35,17 +35,29 @@ func (c *Connection) StartReader() {
 	for {
 		buf := make([]byte, 512)
 
-		msgLength, err := c.Conn.Read(buf)
+		_, err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Println("recv buf err", err)
 			continue
 		}
 
-		//调用当前链接所绑定的HandleAPI
-		if err := c.handleAPI(c.Conn, buf, msgLength); err != nil {
-			fmt.Println("connId", c.ConnID, "handle is error", err)
-			break
+		request := Request{
+			conn: c,
+			data: buf,
 		}
+
+		//执行注册的路由方法
+		go func(request iface.RequestInterface) {
+			c.Router.BeforeHandle(request)
+			c.Router.Handle(request)
+			c.Router.AfterHandle(request)
+		}(&request)
+
+		//调用当前链接所绑定的HandleAPI
+		//if err := c.handleAPI(c.Conn, buf, msgLength); err != nil {
+		//	fmt.Println("connId", c.ConnID, "handle is error", err)
+		//	break
+		//}
 	}
 }
 
