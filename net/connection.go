@@ -47,10 +47,10 @@ func (c *Connection) StartReader() {
 		}
 
 		//执行注册的路由方法
-		go func(request iface.RequestInterface) {
-			c.Router.BeforeHandle(request)
-			c.Router.Handle(request)
-			c.Router.AfterHandle(request)
+		go func(r iface.RequestInterface) {
+			c.Router.BeforeHandle(r)
+			c.Router.Handle(r)
+			c.Router.AfterHandle(r)
 		}(&request)
 
 		//调用当前链接所绑定的HandleAPI
