@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"zx-net/iface"
+	"zx-net/utils"
 )
 
 // 链接类
@@ -33,7 +34,7 @@ func (c *Connection) StartReader() {
 	defer c.Stop()
 
 	for {
-		buf := make([]byte, 512)
+		buf := make([]byte, utils.GlobalObject.MaxPackageSize)
 
 		_, err := c.Conn.Read(buf)
 		if err != nil {

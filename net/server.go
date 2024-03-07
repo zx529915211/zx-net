@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"zx-net/iface"
+	"zx-net/utils"
 )
 
 type Server struct {
@@ -97,12 +98,12 @@ func (s *Server) Serve() {
 	select {}
 }
 
-func NewServer(name string) iface.ServerInterface {
+func NewServer() iface.ServerInterface {
 	return &Server{
-		Name:      name,
+		Name:      utils.GlobalObject.Name,
 		IPVersion: "tcp4",
-		Ip:        "0.0.0.0",
-		Port:      8888,
+		Ip:        utils.GlobalObject.Host,
+		Port:      utils.GlobalObject.TcpPort,
 		Router:    nil,
 	}
 }

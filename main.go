@@ -35,7 +35,7 @@ func (p *PingRouter) AfterHandle(request iface.RequestInterface) {
 }
 
 func main() {
-	s := net.NewServer("zx-net")
+	s := net.NewServer()
 
 	s.AddRouter(&PingRouter{})
 
