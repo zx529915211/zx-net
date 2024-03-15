@@ -1,8 +1,8 @@
 package net
 
 type Message struct {
-	Id      uint32
 	DataLen uint32
+	Id      uint32
 	Data    []byte
 }
 
