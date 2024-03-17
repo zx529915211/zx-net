@@ -13,7 +13,7 @@ type ConnectionInterface interface {
 
 	RemoteAddr() net.Addr
 
-	Send(data []byte) error
+	SendMsg(msgId uint32, data []byte) error
 }
 
 // 处理链接业务的方法

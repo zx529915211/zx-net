@@ -14,42 +14,46 @@ func TestDataPack(t *testing.T) {
 		fmt.Println("server listen err:", err)
 		return
 	}
+	endChan := make(chan bool)
 	go func() {
 		//从客户端读数据
-		for {
-			conn, err := listen.Accept()
-			if err != nil {
-				fmt.Println("Accept error", err)
-			}
-			go func(conn net.Conn) {
-				pack := NewDataPack()
-				for {
-					//把包的head读出来
-					headData := make([]byte, pack.GetHeadLen())
-					_, err := io.ReadFull(conn, headData)
+		conn, err := listen.Accept()
+		if err != nil {
+			fmt.Println("Accept error", err)
+		}
+		go func(conn net.Conn) {
+			pack := NewDataPack()
+			i := 0
+			for {
+				//把包的head读出来
+				headData := make([]byte, pack.GetHeadLen())
+				_, err := io.ReadFull(conn, headData)
+				if err != nil {
+					fmt.Println("read head error")
+					return
+				}
+				msgRes, err := pack.Unpack(headData)
+				if err != nil {
+					fmt.Println("server unpack err", err)
+				}
+				if msgRes.GetMsgLen() > 0 {
+					//有数据，第二次读取
+					msg := msgRes.(*Message)
+					msg.Data = make([]byte, msg.GetMsgLen())
+					_, err := io.ReadFull(conn, msg.Data)
 					if err != nil {
-						fmt.Println("read head error")
+						fmt.Println("server unpack data err:", err)
 						return
 					}
-					msgRes, err := pack.Unpack(headData)
-					if err != nil {
-						fmt.Println("server unpack err", err)
-					}
-					if msgRes.GetMsgLen() > 0 {
-						//有数据，第二次读取
-						msg := msgRes.(*Message)
-						msg.Data = make([]byte, msg.GetMsgLen())
-						_, err := io.ReadFull(conn, msg.Data)
-						if err != nil {
-							fmt.Println("server unpack data err:", err)
-							return
-						}
-						//完整消息读取完毕
-						fmt.Printf("成功接收一个完整的消息，消息长度：%d,消息类型：%d,消息内容:%s\n", msg.DataLen, msg.Id, msg.Data)
+					//完整消息读取完毕
+					fmt.Printf("成功接收一个完整的消息，消息长度：%d,消息类型：%d,消息内容:%s\n", msg.DataLen, msg.Id, msg.Data)
+					i++
+					if i >= 2 {
+						endChan <- true
 					}
 				}
-			}(conn)
-		}
+			}
+		}(conn)
 	}()
 
 	//模拟客户端
@@ -90,5 +94,9 @@ func TestDataPack(t *testing.T) {
 	//一次性发给服务端
 	conn.Write(sendData1)
 
-	select {}
+	select {
+	case <-endChan:
+		fmt.Println("end.....")
+		break
+	}
 }

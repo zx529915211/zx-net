@@ -1,10 +1,11 @@
 package net
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"zx-net/iface"
-	"zx-net/utils"
 )
 
 // 链接类
@@ -34,17 +35,44 @@ func (c *Connection) StartReader() {
 	defer c.Stop()
 
 	for {
-		buf := make([]byte, utils.GlobalObject.MaxPackageSize)
+		//buf := make([]byte, utils.GlobalObject.MaxPackageSize)
+		//
+		//_, err := c.Conn.Read(buf)
+		//if err != nil {
+		//	fmt.Println("recv buf err", err)
+		//	continue
+		//}
+		//创建拆包解包对象
+		dp := NewDataPack()
 
-		_, err := c.Conn.Read(buf)
-		if err != nil {
-			fmt.Println("recv buf err", err)
-			continue
+		//读取客户端的Msg Head 二进制流 8个字节
+		headData := make([]byte, dp.GetHeadLen())
+		n, err := io.ReadFull(c.GetTcpConnection(), headData)
+		if (uint32(n)) != dp.GetHeadLen() || err != nil {
+			fmt.Println("read msg head error", err)
+			break
 		}
+		//拆包 得到dataLen和msgId
+		msg, err := dp.Unpack(headData)
+		if err != nil {
+			fmt.Println("unpack error", err)
+			break
+		}
+
+		//根据dataLen 再次读取Data
+		var data []byte
+		if msg.GetMsgLen() > 0 {
+			data = make([]byte, msg.GetMsgLen())
+			_, err := io.ReadFull(c.GetTcpConnection(), data)
+			if err != nil {
+				fmt.Println("read msg error", err)
+			}
+		}
+		msg.SetMsgData(data)
 
 		request := Request{
 			conn: c,
-			data: buf,
+			msg:  msg,
 		}
 
 		//执行注册的路由方法
@@ -96,7 +124,24 @@ func (c *Connection) RemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
 
-func (c *Connection) Send(data []byte) error {
-	c.Conn.Write(data[:])
+func (c *Connection) SendMsg(msgId uint32, data []byte) error {
+	if c.isClosed == true {
+		return errors.New("Connection closed when send msg")
+	}
+	//data封包
+	dp := NewDataPack()
+
+	binaryMsg, err := dp.Pack(NewMsgPackage(msgId, data))
+
+	if err != nil {
+		fmt.Println("Pack error msg id =", msgId)
+		return errors.New("Pack error msg")
+	}
+
+	if _, err := c.Conn.Write(binaryMsg); err != nil {
+		fmt.Println("Write msg id ", msgId, " error :", err)
+		return errors.New("conn Write error")
+	}
+
 	return nil
 }
