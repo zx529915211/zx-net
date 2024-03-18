@@ -3,7 +3,6 @@ package utils
 import (
 	"log/slog"
 	"os"
-	"strings"
 )
 
 var myLog *slog.Logger
@@ -23,9 +22,10 @@ func init() {
 }
 
 func LogError(errMsg string, err error) {
-	builder := strings.Builder{}
-	builder.WriteString(errMsg)
-	builder.WriteString(" err:")
-	builder.WriteString(err.Error())
-	myLog.Error(builder.String())
+	LogErrorString(errMsg, " err:", err.Error())
+}
+
+func LogErrorString(str ...string) {
+	string := JoinStrings(str...)
+	myLog.Error(string)
 }

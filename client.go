@@ -18,7 +18,7 @@ func main() {
 	for {
 		//发送封包的Message
 		dp := net2.NewDataPack()
-		binaryMsg, err := dp.Pack(net2.NewMsgPackage(0, []byte("gzf566")))
+		binaryMsg, err := dp.Pack(net2.NewMsgPackage(1, []byte("gzf566")))
 		if err != nil {
 			utils.LogError("dp pack", err)
 			return

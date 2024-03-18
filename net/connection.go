@@ -10,20 +10,20 @@ import (
 
 // 链接类
 type Connection struct {
-	Conn     *net.TCPConn
-	ConnID   uint32
-	isClosed bool
-	ExitChan chan bool
-	Router   iface.RouterInterface
+	Conn      *net.TCPConn
+	ConnID    uint32
+	isClosed  bool
+	ExitChan  chan bool
+	MsgHandle iface.MsgHandleInterface
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, router iface.RouterInterface) *Connection {
+func NewConnection(conn *net.TCPConn, connId uint32, msgHandle iface.MsgHandleInterface) *Connection {
 	return &Connection{
-		Conn:     conn,
-		ConnID:   connId,
-		Router:   router,
-		isClosed: false,
-		ExitChan: make(chan bool, 1),
+		Conn:      conn,
+		ConnID:    connId,
+		MsgHandle: msgHandle,
+		isClosed:  false,
+		ExitChan:  make(chan bool, 1),
 	}
 }
 
@@ -76,17 +76,8 @@ func (c *Connection) StartReader() {
 		}
 
 		//执行注册的路由方法
-		go func(r iface.RequestInterface) {
-			c.Router.BeforeHandle(r)
-			c.Router.Handle(r)
-			c.Router.AfterHandle(r)
-		}(&request)
+		go c.MsgHandle.DoMsgHandle(&request)
 
-		//调用当前链接所绑定的HandleAPI
-		//if err := c.handleAPI(c.Conn, buf, msgLength); err != nil {
-		//	fmt.Println("connId", c.ConnID, "handle is error", err)
-		//	break
-		//}
 	}
 }
 

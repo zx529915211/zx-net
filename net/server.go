@@ -12,11 +12,15 @@ type Server struct {
 	IPVersion string
 	Ip        string
 	Port      int
-	Router    iface.RouterInterface
+	MsgHandle iface.MsgHandleInterface
 }
 
-func (s *Server) AddRouter(router iface.RouterInterface) {
-	s.Router = router
+//func (s *Server) AddMsgHandle(msgHandle iface.MsgHandleInterface) {
+//	s.MsgHandle = msgHandle
+//}
+
+func (s *Server) AddRouter(msgId uint32, router iface.RouterInterface) {
+	s.MsgHandle.AddRouter(msgId, router)
 }
 
 // 启动服务器
@@ -41,7 +45,7 @@ func (s *Server) Start() {
 				fmt.Println("acceptTcp err:", err)
 				continue
 			}
-			connection := NewConnection(conn, cid, s.Router)
+			connection := NewConnection(conn, cid, s.MsgHandle)
 			cid++
 			go connection.Start()
 		}
@@ -68,6 +72,6 @@ func NewServer() iface.ServerInterface {
 		IPVersion: "tcp4",
 		Ip:        utils.GlobalObject.Host,
 		Port:      utils.GlobalObject.TcpPort,
-		Router:    nil,
+		MsgHandle: NewMsgHandle(),
 	}
 }
