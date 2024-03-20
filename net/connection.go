@@ -14,6 +14,7 @@ type Connection struct {
 	ConnID    uint32
 	isClosed  bool
 	ExitChan  chan bool
+	msgChan   chan []byte
 	MsgHandle iface.MsgHandleInterface
 }
 
@@ -21,9 +22,10 @@ func NewConnection(conn *net.TCPConn, connId uint32, msgHandle iface.MsgHandleIn
 	return &Connection{
 		Conn:      conn,
 		ConnID:    connId,
-		MsgHandle: msgHandle,
 		isClosed:  false,
 		ExitChan:  make(chan bool, 1),
+		msgChan:   make(chan []byte),
+		MsgHandle: msgHandle,
 	}
 }
 
@@ -31,7 +33,7 @@ func NewConnection(conn *net.TCPConn, connId uint32, msgHandle iface.MsgHandleIn
 func (c *Connection) StartReader() {
 	fmt.Println("Reader Goroutine is running...")
 
-	defer fmt.Println("connId = ", c.ConnID, "reader is exit, remote addr is ", c.RemoteAddr().String())
+	defer fmt.Println("connId = ", c.ConnID, "【reader is exit】, remote addr is ", c.RemoteAddr().String())
 	defer c.Stop()
 
 	for {
@@ -81,12 +83,31 @@ func (c *Connection) StartReader() {
 	}
 }
 
+func (c *Connection) StartWriter() {
+	fmt.Println("Writer Goroutine is running...")
+	defer fmt.Println("【writer is exit】 remote addr is", c.RemoteAddr().String())
+	for {
+		select {
+		case msg := <-c.msgChan:
+			if _, err := c.Conn.Write(msg); err != nil {
+				fmt.Println("send data error,", err)
+				return
+			}
+		case <-c.ExitChan:
+			return
+
+		}
+	}
+}
+
 // 启动链接
 func (c *Connection) Start() {
 	fmt.Println("Conn start ,connId = ", c.ConnID)
 
 	//启动从当前链接读数据的业务
 	go c.StartReader()
+	//启动写协程，处理读业务最后发送给客户端的消息
+	go c.StartWriter()
 }
 
 func (c *Connection) Stop() {
@@ -99,8 +120,9 @@ func (c *Connection) Stop() {
 	c.isClosed = true
 
 	c.Conn.Close()
-
+	c.ExitChan <- true
 	close(c.ExitChan)
+	close(c.msgChan)
 }
 
 func (c *Connection) GetTcpConnection() *net.TCPConn {
@@ -129,10 +151,11 @@ func (c *Connection) SendMsg(msgId uint32, data []byte) error {
 		return errors.New("Pack error msg")
 	}
 
-	if _, err := c.Conn.Write(binaryMsg); err != nil {
-		fmt.Println("Write msg id ", msgId, " error :", err)
-		return errors.New("conn Write error")
-	}
+	//if _, err := c.Conn.Write(binaryMsg); err != nil {
+	//	fmt.Println("Write msg id ", msgId, " error :", err)
+	//	return errors.New("conn Write error")
+	//}
+	c.msgChan <- binaryMsg
 
 	return nil
 }
