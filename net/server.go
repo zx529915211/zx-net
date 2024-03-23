@@ -27,6 +27,8 @@ func (s *Server) AddRouter(msgId uint32, router iface.RouterInterface) {
 func (s *Server) Start() {
 	fmt.Printf("try to start %s:%d server\n", s.Ip, s.Port)
 	go func() {
+		//开启工作池
+		s.MsgHandle.StartWorkerPool()
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.Ip, s.Port))
 		if err != nil {
 			fmt.Println("create tcp addr err:", err)

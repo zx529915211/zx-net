@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"zx-net/iface"
+	"zx-net/utils"
 )
 
 // 链接类
@@ -77,8 +78,12 @@ func (c *Connection) StartReader() {
 			msg:  msg,
 		}
 
-		//执行注册的路由方法
-		go c.MsgHandle.DoMsgHandle(&request)
+		if utils.GlobalObject.WorkerPoolSize > 0 {
+			//开启了工作池，交给工作池处理
+			c.MsgHandle.SendMsgToTaskQueue(&request)
+		} else {
+			go c.MsgHandle.DoMsgHandle(&request)
+		}
 
 	}
 }
