@@ -8,11 +8,12 @@ import (
 )
 
 type Server struct {
-	Name      string
-	IPVersion string
-	Ip        string
-	Port      int
-	MsgHandle iface.MsgHandleInterface
+	Name        string
+	IPVersion   string
+	Ip          string
+	Port        int
+	MsgHandle   iface.MsgHandleInterface
+	ConnManager iface.ConnManagerInterface
 }
 
 //func (s *Server) AddMsgHandle(msgHandle iface.MsgHandleInterface) {
@@ -47,7 +48,13 @@ func (s *Server) Start() {
 				fmt.Println("acceptTcp err:", err)
 				continue
 			}
-			connection := NewConnection(conn, cid, s.MsgHandle)
+			//最大连接个数判断
+			if s.ConnManager.Len() >= utils.GlobalObject.MaxConn {
+				conn.Close()
+				continue
+			}
+
+			connection := NewConnection(s, conn, cid, s.MsgHandle)
 			cid++
 			go connection.Start()
 		}
@@ -57,6 +64,8 @@ func (s *Server) Start() {
 
 // 停止服务器
 func (s *Server) Stop() {
+	fmt.Println("server stop")
+	s.ConnManager.Clear()
 
 }
 
@@ -68,12 +77,17 @@ func (s *Server) Serve() {
 	select {}
 }
 
+func (s *Server) GetConnManager() iface.ConnManagerInterface {
+	return s.ConnManager
+}
+
 func NewServer() iface.ServerInterface {
 	return &Server{
-		Name:      utils.GlobalObject.Name,
-		IPVersion: "tcp4",
-		Ip:        utils.GlobalObject.Host,
-		Port:      utils.GlobalObject.TcpPort,
-		MsgHandle: NewMsgHandle(),
+		Name:        utils.GlobalObject.Name,
+		IPVersion:   "tcp4",
+		Ip:          utils.GlobalObject.Host,
+		Port:        utils.GlobalObject.TcpPort,
+		MsgHandle:   NewMsgHandle(),
+		ConnManager: NewConnManager(),
 	}
 }

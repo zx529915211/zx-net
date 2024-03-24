@@ -11,6 +11,7 @@ import (
 
 // 链接类
 type Connection struct {
+	TcpServer iface.ServerInterface
 	Conn      *net.TCPConn
 	ConnID    uint32
 	isClosed  bool
@@ -19,8 +20,9 @@ type Connection struct {
 	MsgHandle iface.MsgHandleInterface
 }
 
-func NewConnection(conn *net.TCPConn, connId uint32, msgHandle iface.MsgHandleInterface) *Connection {
-	return &Connection{
+func NewConnection(server iface.ServerInterface, conn *net.TCPConn, connId uint32, msgHandle iface.MsgHandleInterface) *Connection {
+	c := &Connection{
+		TcpServer: server,
 		Conn:      conn,
 		ConnID:    connId,
 		isClosed:  false,
@@ -28,6 +30,8 @@ func NewConnection(conn *net.TCPConn, connId uint32, msgHandle iface.MsgHandleIn
 		msgChan:   make(chan []byte),
 		MsgHandle: msgHandle,
 	}
+	c.TcpServer.GetConnManager().Add(c)
+	return c
 }
 
 // 链接的读业务
@@ -116,7 +120,7 @@ func (c *Connection) Start() {
 }
 
 func (c *Connection) Stop() {
-	fmt.Println("conn stop().. connid=", c.ConnID)
+	fmt.Println("a conn stop().. connid=", c.ConnID)
 
 	if c.isClosed {
 		return
@@ -126,6 +130,7 @@ func (c *Connection) Stop() {
 
 	c.Conn.Close()
 	c.ExitChan <- true
+	c.TcpServer.GetConnManager().Remove(c)
 	close(c.ExitChan)
 	close(c.msgChan)
 }
