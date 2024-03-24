@@ -117,6 +117,9 @@ func (c *Connection) Start() {
 	go c.StartReader()
 	//启动写协程，处理读业务最后发送给客户端的消息
 	go c.StartWriter()
+
+	//调用开发者自定义的 创建链接后需要处理的业务，执行对应的hook函数
+	c.TcpServer.CallOnConnStart(c)
 }
 
 func (c *Connection) Stop() {
@@ -127,6 +130,9 @@ func (c *Connection) Stop() {
 	}
 
 	c.isClosed = true
+
+	//调用开发者自定义的 销毁链接前需要处理的业务，执行对应的hook函数
+	c.TcpServer.CallOnConnStop(c)
 
 	c.Conn.Close()
 	c.ExitChan <- true

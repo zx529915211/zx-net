@@ -14,6 +14,8 @@ type Server struct {
 	Port        int
 	MsgHandle   iface.MsgHandleInterface
 	ConnManager iface.ConnManagerInterface
+	OnConnStart func(conn iface.ConnectionInterface)
+	OnConnStop  func(conn iface.ConnectionInterface)
 }
 
 //func (s *Server) AddMsgHandle(msgHandle iface.MsgHandleInterface) {
@@ -89,5 +91,27 @@ func NewServer() iface.ServerInterface {
 		Port:        utils.GlobalObject.TcpPort,
 		MsgHandle:   NewMsgHandle(),
 		ConnManager: NewConnManager(),
+	}
+}
+
+func (s *Server) SetOnConnStart(hookFunc func(conn iface.ConnectionInterface)) {
+	s.OnConnStart = hookFunc
+}
+
+func (s *Server) SetOnConnStop(hookFunc func(conn iface.ConnectionInterface)) {
+	s.OnConnStop = hookFunc
+}
+
+func (s *Server) CallOnConnStart(conn iface.ConnectionInterface) {
+	if s.OnConnStart != nil {
+		fmt.Println("CallOnConnStart.. ")
+		s.OnConnStart(conn)
+	}
+}
+
+func (s *Server) CallOnConnStop(conn iface.ConnectionInterface) {
+	if s.OnConnStop != nil {
+		fmt.Println("CallOnConnStop.. ")
+		s.OnConnStop(conn)
 	}
 }
